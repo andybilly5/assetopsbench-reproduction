@@ -1,0 +1,11 @@
+{
+  "data/kb/fmsr_chillers.json": "bbac74d3d1687790f6bb6dbc443830cbb58c4421dc69cd07111fad53f26a1d76",
+  "data/kb/fmsr_chillers_v2.json": "2eb62af96bb1d67855d410a43d8b2b062d2c018a30274b09362c5ab0fc5e49a0",
+  "data/kb/tsfm_catalog.json": "a2ada0710eb832fa1698f699dca4571acb211b22f15f11a74f6d80d9d37f02fb",
+  "data/normalized/assets.csv": "bc89fbd01f655e93c0f4f17288859b52d640477e97e8e43e66e76dc7409c347b",
+  "data/normalized/readings.csv": "4a62fbe9b574ddfa02519a6dcf84ce653e6ae13156ef7e80150935f0d9e81033",
+  "data/normalized/sensors.csv": "deabfad89b1ee48898b647a4b1c512f779084729f7934f5ade60628c2653e141",
+  "data/scenarios/all_utterance.jsonl": "1e015de054b6e4f493bbceca2d5ebd7b464c91b7271cb3804679e2d40b56770a",
+  "data/wo/PROVENANCE.json": "93b0ea8a6a07e0b23cdccb784861f935dd33423c956a3166553c561a2ff37bb1",
+  "data/wo/synthetic_workorders.json": "f119cba589488ed56b76c36c6232eca35fcc24f013ffe6e0f2470332e23fe4c2"
+}

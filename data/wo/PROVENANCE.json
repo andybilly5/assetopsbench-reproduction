@@ -1,0 +1,17 @@
+{
+  "source_origin": "self-built",
+  "is_upstream_assetopsbench_workorders": false,
+  "upstream_workorder_count_reference": "论文/上游 AssetOpsBench 工单面约 4.2K 条；本机本地数据面只有 3 资产 / 45 传感器 / 136,805 读数，没有任何上游工单记录",
+  "local_data_boundary": {
+    "assets": 3,
+    "sensors": 45,
+    "readings": 136805,
+    "upstream_workorder_records_present": false,
+    "vibration_points_present": false
+  },
+  "generation_method": "由 data/wo/gen_workorders.py 确定性生成：只读 data/normalized/assets.csv 与 sensors.csv 的目录字段（site/asset_id/asset_class/sensor 名），按固定模板派生出工单；related_sensor 若不在该资产目录则回退到目录内第一个真实传感器。不联网、不复制上游工单文本、不生成任何实测频谱或工单数值。",
+  "workorder_count": 26,
+  "data_file": "data/wo/synthetic_workorders.json",
+  "do_not_claim": "不得声称本工单库等同于上游 4.2K 工单记录；WO 工具面只证明本地可枚举的检索/统计/归类/SLA/停机/备件/故障模式映射能力已接通，不代表上游工单系统已复现。",
+  "generated_at": "2026-11-14"
+}

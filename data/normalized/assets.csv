@@ -1,0 +1,4 @@
+site,asset_id,asset_class
+MAIN,Chiller 6,Chiller
+MAIN,hyd_1,Pump
+MAIN,mp_1,Pump

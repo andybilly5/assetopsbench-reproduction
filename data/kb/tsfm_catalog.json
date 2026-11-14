@@ -1,0 +1,120 @@
+{
+  "provenance": {
+    "source": "本地自建，非上游 AssetOpsBench tsfm MCP server",
+    "tool_names_from": "论文 §A.3 Table 4（aitasks / tsfmmodels / tsfm_forecasting / tsfm forecasting finetune / tsfm integrated tsad）+ §4.3 描述的重采样、工况判定、有限插补、conformal tsad",
+    "model_catalog_basis": "公开 HuggingFace 上真实存在的时序基础模型 checkpoint，不是上游 tsfmmodels 的原始清单（上游清单未公开）",
+    "execution_note": "本机离网且无 GPU 余量加载 HF 权重，forecast/tsad 用确定性本地基线（水平+季节剖面 / 滚动稳健 z 分数）实现，接口与参数对齐上游，数值不代表上游模型输出",
+    "不可声称": "不得称本工具面等同上游 41 个 tsfm 工具，也不得把本模块分数当作上游 TSFM Agent 的复现度"
+  },
+  "tasks": [
+    {
+      "task_id": "forecasting",
+      "tool": "tsfm.forecast",
+      "description": "Predict future values of one or more sensor target columns over a horizon.",
+      "methods": ["zero_shot_foundation", "seasonal_naive_baseline"]
+    },
+    {
+      "task_id": "forecasting_finetune",
+      "tool": "tsfm.finetune",
+      "description": "Fine-tune a pretrained forecasting checkpoint on an asset's own history.",
+      "methods": ["head_only", "full_finetune"]
+    },
+    {
+      "task_id": "anomaly_detection",
+      "tool": "tsfm.tsad",
+      "description": "Time-series anomaly detection from model residuals with a calibrated threshold.",
+      "methods": ["conformal_residual", "robust_zscore"]
+    },
+    {
+      "task_id": "imputation",
+      "tool": "tsfm.impute",
+      "description": "Report gaps and apply limited imputation (short gaps only, long gaps left missing).",
+      "methods": ["linear_short_gap"]
+    },
+    {
+      "task_id": "resampling",
+      "tool": "tsfm.resample",
+      "description": "Align irregular readings to a fixed grid and infer operating periods.",
+      "methods": ["fifteen_minute_grid"]
+    }
+  ],
+  "models": [
+    {
+      "model_id": "chronos_t5_small",
+      "checkpoint": "amazon/chronos-t5-small",
+      "family": "chronos",
+      "params": "~46M",
+      "supports": ["forecasting", "zero_shot"],
+      "context_length": 512,
+      "prediction_length": 64,
+      "multivariate": false,
+      "description": "Tokenizes scaled series into bins and decodes probabilistically; strong zero-shot baseline."
+    },
+    {
+      "model_id": "chronos_bolt_small",
+      "checkpoint": "amazon/chronos-bolt-small",
+      "family": "chronos",
+      "params": "~48M",
+      "supports": ["forecasting", "zero_shot"],
+      "context_length": 2048,
+      "prediction_length": 64,
+      "multivariate": false,
+      "description": "Bolt variant with patched encoder and direct multi-step head; much faster inference."
+    },
+    {
+      "model_id": "timesfm_1_0_200m",
+      "checkpoint": "google/timesfm-1.0-200m",
+      "family": "timesfm",
+      "params": "200M",
+      "supports": ["forecasting", "zero_shot"],
+      "context_length": 512,
+      "prediction_length": 128,
+      "multivariate": false,
+      "description": "Decoder-only patched transformer pretrained on a large time-series corpus."
+    },
+    {
+      "model_id": "moirai_1_0_small",
+      "checkpoint": "salesforce/moirai-1.0-R-small",
+      "family": "moirai",
+      "params": "~14M",
+      "supports": ["forecasting", "zero_shot", "multivariate"],
+      "context_length": 512,
+      "prediction_length": 60,
+      "multivariate": true,
+      "description": "Universal forecaster with any-variate attention; handles multivariate targets jointly."
+    },
+    {
+      "model_id": "granite_ttm_r2",
+      "checkpoint": "ibm-granite/granite-timeseries-ttm-r2",
+      "family": "ttm",
+      "params": "~1M",
+      "supports": ["forecasting", "zero_shot", "finetune"],
+      "context_length": 512,
+      "prediction_length": 96,
+      "multivariate": true,
+      "description": "Tiny time mixer; deliberately small, designed for cheap per-asset fine-tuning."
+    },
+    {
+      "model_id": "lag_llama",
+      "checkpoint": "time-series-foundation-models/lag-llama",
+      "family": "lag_llama",
+      "params": "~200M",
+      "supports": ["forecasting", "zero_shot", "finetune"],
+      "context_length": 512,
+      "prediction_length": 24,
+      "multivariate": false,
+      "description": "Lag-based foundation model; lags and horizon are decoupled at inference."
+    },
+    {
+      "model_id": "moment_1_small",
+      "checkpoint": "AutonLab/MOMENT-1-small",
+      "family": "moment",
+      "params": "~40M",
+      "supports": ["forecasting", "classification", "anomaly_detection", "imputation"],
+      "context_length": 512,
+      "prediction_length": 8,
+      "multivariate": false,
+      "description": "Multi-task foundation model covering forecasting, classification and reconstruction-based detection."
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+{
+  "provenance": {
+    "version": "v2-decicularised",
+    "source": "本地自建，非上游 AssetOpsBench fmsr MCP server",
+    "construction": "按 ASHRAE RP-1043 冷水机组 FDD 标准故障分类（8 类）逐条重建；测点归因按制冷循环物理（过热度/过冷度/传热系数/比功率）推导，写库时不再参考场景提问措辞，也不写入'某题问什么就写什么'的条目",
+    "known_residual_bias": "作者已读过 18 条 FMSR 场景，无法真正'遗忘'；仍保留的是故障名的通用英文写法和本机 12 个测点的真实名称，其余字段（描述、时序签名、监测方案、优先级）均为物理重写",
+    "compare_to": "v1 = fmsr_chillers.json（12 个故障模式，按 18 条提问需求重建）",
+    "不可声称": "不得称本知识库等同上游 fmsr server；v2 的价值只在于给出一个'不按题目定制'的对照点"
+  },
+  "sensor_classes": {
+    "temperature": [
+      "Return Temperature",
+      "Supply Temperature",
+      "Setpoint Temperature",
+      "Liquid Refrigerant Evaporator Temperature",
+      "Condenser Water Return To Tower Temperature"
+    ],
+    "power": ["Power Input", "Chiller Efficiency", "Chiller % Loaded", "Tonnage"],
+    "flow": ["Condenser Water Flow"],
+    "status": ["Run Status", "Schedule"],
+    "vibration": []
+  },
+  "failure_modes": [
+    {
+      "name": "Condenser Fouling",
+      "code": "ConF",
+      "description": "Scale or biofilm on the condenser water side raises the condenser approach temperature, so the same heat rejection needs a higher condensing pressure and more compressor work.",
+      "detected_by": [
+        "Condenser Water Return To Tower Temperature",
+        "Chiller Efficiency",
+        "Power Input",
+        "Tonnage",
+        "Condenser Water Flow"
+      ],
+      "sensor_classes": ["temperature", "power", "flow"],
+      "temporal": [
+        "condenser approach rises slowly over weeks",
+        "specific power (Power Input / Tonnage) drifts up",
+        "effect is strongest at high load"
+      ],
+      "monitoring_plan": [
+        "trend condenser approach against design value",
+        "track kW/ton at comparable load and wet-bulb",
+        "schedule tube cleaning when approach exceeds the threshold"
+      ],
+      "priority_sensor": "Condenser Water Return To Tower Temperature"
+    },
+    {
+      "name": "Reduced Condenser Water Flow",
+      "code": "RedCdW",
+      "description": "A throttled valve, clogged strainer or failing pump lowers condenser water flow, which raises the leaving condenser water temperature and degrades heat rejection.",
+      "detected_by": [
+        "Condenser Water Flow",
+        "Condenser Water Return To Tower Temperature",
+        "Chiller Efficiency",
+        "Power Input"
+      ],
+      "sensor_classes": ["flow", "temperature", "power"],
+      "temporal": [
+        "flow drops as a step or ramp, not a slow drift",
+        "condenser water temperature difference widens",
+        "trip risk appears once flow falls below the minimum"
+      ],
+      "monitoring_plan": [
+        "compare flow with pump curve and design flow",
+        "check strainer differential pressure",
+        "verify valve position against command"
+      ],
+      "priority_sensor": "Condenser Water Flow"
+    },
+    {
+      "name": "Non-condensable Gases in Refrigerant",
+      "code": "NcG",
+      "description": "Air or nitrogen entering the refrigerant circuit accumulates in the condenser and raises condensing pressure without a matching load increase.",
+      "detected_by": [
+        "Liquid Refrigerant Evaporator Temperature",
+        "Chiller Efficiency",
+        "Power Input",
+        "Condenser Water Return To Tower Temperature"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        "condensing pressure high while evaporator temperature stays normal",
+        "efficiency loss is load independent",
+        "purge activity or run time increases"
+      ],
+      "monitoring_plan": [
+        "compare measured condensing pressure with the saturation value implied by condenser water temperature",
+        "log purge counts",
+        "recover refrigerant and evacuate when confirmed"
+      ],
+      "priority_sensor": "Liquid Refrigerant Evaporator Temperature"
+    },
+    {
+      "name": "Reduced Evaporator Water Flow",
+      "code": "RedEvW",
+      "description": "Restricted chilled-water flow lowers the evaporator heat transfer coefficient, so the supply temperature rises and capacity falls for the same load.",
+      "detected_by": [
+        "Return Temperature",
+        "Supply Temperature",
+        "Tonnage",
+        "Chiller Efficiency"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        "chilled-water temperature difference widens",
+        "supply temperature drifts toward the return temperature",
+        "low-evaporator-temperature or freeze protection trips appear"
+      ],
+      "monitoring_plan": [
+        "trend delta-T at constant load",
+        "check secondary loop valve position and pump status",
+        "verify evaporator pressure drop"
+      ],
+      "priority_sensor": "Supply Temperature"
+    },
+    {
+      "name": "Refrigerant Undercharge",
+      "code": "RefLeak",
+      "description": "A leak reduces refrigerant charge, lowering evaporator pressure and subcooling so the compressor must run longer to hold the setpoint.",
+      "detected_by": [
+        "Liquid Refrigerant Evaporator Temperature",
+        "Tonnage",
+        "Power Input",
+        "Chiller Efficiency",
+        "Chiller % Loaded"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        "evaporator temperature rises above the design saturation value",
+        "subcooling shrinks and may disappear",
+        "capacity loss grows gradually as charge escapes"
+      ],
+      "monitoring_plan": [
+        "trend subcooling and evaporator approach",
+        "leak test the circuit at the joints and seals",
+        "recharge to the nameplate weight, not by pressure alone"
+      ],
+      "priority_sensor": "Liquid Refrigerant Evaporator Temperature"
+    },
+    {
+      "name": "Refrigerant Overcharge",
+      "code": "RefOver",
+      "description": "Excess charge floods condenser tubes, raising condensing pressure and subcooling and reducing available heat-transfer area.",
+      "detected_by": [
+        "Liquid Refrigerant Evaporator Temperature",
+        "Chiller Efficiency",
+        "Power Input",
+        "Tonnage"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        "subcooling stays high after the load stabilises",
+        "condensing pressure rises with a stable load",
+        "efficiency falls while capacity barely changes"
+      ],
+      "monitoring_plan": [
+        "compare subcooling with the design band",
+        "verify charge against the as-built weight",
+        "recover excess charge rather than venting"
+      ],
+      "priority_sensor": "Liquid Refrigerant Evaporator Temperature"
+    },
+    {
+      "name": "Excess Oil in Refrigerant",
+      "code": "ExOil",
+      "description": "Oil migrating into the evaporator coats tube surfaces, adding a thermal resistance that shows up as a capacity loss with unchanged water flow.",
+      "detected_by": [
+        "Tonnage",
+        "Chiller Efficiency",
+        "Supply Temperature",
+        "Power Input"
+      ],
+      "sensor_classes": ["power", "temperature"],
+      "temporal": [
+        "capacity falls while flow and temperatures stay nominal",
+        "efficiency loss does not respond to cleaning the water side",
+        "oil level in the sump drops over time"
+      ],
+      "monitoring_plan": [
+        "compare measured capacity with the water-side heat balance",
+        "check oil return orifice and eductor",
+        "oil-return test then recharge oil to the correct level"
+      ],
+      "priority_sensor": "Chiller Efficiency"
+    },
+    {
+      "name": "Evaporator Fouling",
+      "code": "EvF",
+      "description": "Fouling on the evaporator water side adds resistance, so the approach temperature rises and the supply temperature cannot reach the setpoint at full load.",
+      "detected_by": [
+        "Supply Temperature",
+        "Return Temperature",
+        "Tonnage",
+        "Chiller Efficiency",
+        "Liquid Refrigerant Evaporator Temperature"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        "evaporator approach rises over weeks to months",
+        "setpoint becomes unreachable at design load",
+        "effect scales with load, unlike a charge fault"
+      ],
+      "monitoring_plan": [
+        "trend evaporator approach at comparable load",
+        "inspect brushes and water quality records",
+        "clean tubes and re-baseline the approach"
+      ],
+      "priority_sensor": "Supply Temperature"
+    }
+  ],
+  "symptom_causes": [
+    {
+      "sensor": "Condenser Water Flow",
+      "direction": "drops",
+      "failure_mode": "Reduced Condenser Water Flow",
+      "confidence": 0.9,
+      "note": "flow itself is the causal variable; check strainer and valve before suspecting tubes"
+    },
+    {
+      "sensor": "Condenser Water Return To Tower Temperature",
+      "direction": "rises",
+      "failure_mode": "Condenser Fouling",
+      "confidence": 0.75,
+      "note": "approach rise at stable flow and load points to tube-side resistance"
+    },
+    {
+      "sensor": "Condenser Water Return To Tower Temperature",
+      "direction": "rises",
+      "failure_mode": "Non-condensable Gases in Refrigerant",
+      "confidence": 0.6,
+      "note": "distinguish by purge activity and by load independence of the efficiency loss"
+    },
+    {
+      "sensor": "Chiller Efficiency",
+      "direction": "drops",
+      "failure_mode": "Condenser Fouling",
+      "confidence": 0.55,
+      "note": "efficiency is a lagging indicator; confirm with condenser approach before acting"
+    },
+    {
+      "sensor": "Chiller Efficiency",
+      "direction": "drops",
+      "failure_mode": "Excess Oil in Refrigerant",
+      "confidence": 0.45,
+      "note": "if water-side cleaning does not restore efficiency, suspect oil in the evaporator"
+    },
+    {
+      "sensor": "Supply Temperature",
+      "direction": "rises",
+      "failure_mode": "Reduced Evaporator Water Flow",
+      "confidence": 0.7,
+      "note": "widening chilled-water delta-T separates flow restriction from fouling"
+    },
+    {
+      "sensor": "Supply Temperature",
+      "direction": "rises",
+      "failure_mode": "Evaporator Fouling",
+      "confidence": 0.6,
+      "note": "approach rise with normal flow favours fouling over flow restriction"
+    },
+    {
+      "sensor": "Liquid Refrigerant Evaporator Temperature",
+      "direction": "rises",
+      "failure_mode": "Refrigerant Undercharge",
+      "confidence": 0.8,
+      "note": "rising evaporator temperature with shrinking subcooling is the charge signature"
+    },
+    {
+      "sensor": "Liquid Refrigerant Evaporator Temperature",
+      "direction": "drops",
+      "failure_mode": "Refrigerant Overcharge",
+      "confidence": 0.65,
+      "note": "high subcooling at stable load supports overcharge"
+    },
+    {
+      "sensor": "Tonnage",
+      "direction": "drops",
+      "failure_mode": "Excess Oil in Refrigerant",
+      "confidence": 0.5,
+      "note": "capacity loss with nominal water flow and no charge anomaly"
+    }
+  ]
+}

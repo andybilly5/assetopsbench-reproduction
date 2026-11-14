@@ -1,0 +1,281 @@
+{
+  "schema_version": "1.0",
+  "asset_class": "Chiller",
+  "provenance": {
+    "origin": "self-built",
+    "why": "上游 IBM/AssetOpsBench 的 fmsr MCP server 源码在本机不可获取（GitHub 直连超时），本文件按 18 条 FMSR 场景的实际提问需求 + 公开冷水机组 FDD 文献的通用故障清单重建，不保证与上游工具名/返回结构一致。",
+    "do_not_claim": "不得声称本 KB 等同于上游 fmsr server 的知识库"
+  },
+  "sensor_classes": {
+    "temperature": [
+      "Condenser Water Return To Tower Temperature",
+      "Liquid Refrigerant Evaporator Temperature",
+      "Return Temperature",
+      "Setpoint Temperature",
+      "Supply Temperature"
+    ],
+    "power": [
+      "Power Input",
+      "Chiller % Loaded",
+      "Tonnage",
+      "Chiller Efficiency"
+    ],
+    "flow": ["Condenser Water Flow"],
+    "status": ["Run Status", "Schedule"],
+    "vibration": []
+  },
+  "failure_modes": [
+    {
+      "name": "Compressor Overheating",
+      "description": "压缩机排气温度或壳体温度超出允许范围，多由制冷剂不足、冷凝器换热不良或长时间高负荷引起。",
+      "detected_by": [
+        "Power Input",
+        "Supply Temperature",
+        "Liquid Refrigerant Evaporator Temperature",
+        "Return Temperature",
+        "Chiller % Loaded"
+      ],
+      "sensor_classes": ["power", "temperature"],
+      "temporal": [
+        {"sensor": "Power Input", "signature": "持续高于同负荷基线 5% 以上，且随负荷下降仍不回落"},
+        {"sensor": "Supply Temperature", "signature": "缓慢抬升，制冷量下降"},
+        {"sensor": "Liquid Refrigerant Evaporator Temperature", "signature": "抬升或波动加剧"}
+      ],
+      "monitoring_plan": [
+        "以 Power Input 与 Chiller % Loaded 的比值作为主指标，建立 7 天滑窗基线",
+        "连采 Supply Temperature 与 Liquid Refrigerant Evaporator Temperature，观察两者同时抬升",
+        "存在振动测点时应补测压缩机壳体振动（本机 IoT 目录无振动传感器）"
+      ],
+      "priority_sensor": "Power Input"
+    },
+    {
+      "name": "Compressor Motor Failure",
+      "description": "压缩机电机绕组或轴承失效，典型表现为电流骤降或骤升至零后停机。",
+      "detected_by": ["Power Input", "Run Status", "Chiller Efficiency"],
+      "sensor_classes": ["power", "status"],
+      "temporal": [
+        {"sensor": "Power Input", "signature": "阶跃式跌到接近 0，且不再恢复"},
+        {"sensor": "Run Status", "signature": "由运行态切换到停机态"},
+        {"sensor": "Chiller Efficiency", "signature": "故障前出现效率抖动或短时下降"}
+      ],
+      "monitoring_plan": [
+        "以 Power Input 的一阶差分检测阶跃跌落（阈值取基线方差的 6 倍）",
+        "联动 Run Status，确认是主动停机还是异常掉线",
+        "本机无振动与电流分相测点，无法做早期机械诊断"
+      ],
+      "priority_sensor": "Power Input"
+    },
+    {
+      "name": "Condenser Water Side Fouling",
+      "description": "冷凝器水侧结垢导致换热系数下降，冷凝温度与回水温度升高。",
+      "detected_by": [
+        "Condenser Water Return To Tower Temperature",
+        "Condenser Water Flow",
+        "Chiller Efficiency",
+        "Power Input"
+      ],
+      "sensor_classes": ["temperature", "flow", "power"],
+      "temporal": [
+        {"sensor": "Condenser Water Return To Tower Temperature", "signature": "月度尺度单调抬升"},
+        {"sensor": "Chiller Efficiency", "signature": "同负荷下逐月下降"},
+        {"sensor": "Condenser Water Flow", "signature": "流量略降或不变"}
+      ],
+      "monitoring_plan": [
+        "跟踪 Condenser Water Return To Tower Temperature 与同负荷 Chiller Efficiency 的比值趋势",
+        "按周计算效率衰减斜率，超过 3%/月触发清洗工单"
+      ],
+      "priority_sensor": "Condenser Water Return To Tower Temperature"
+    },
+    {
+      "name": "Evaporator Water Side Fouling",
+      "description": "蒸发器水侧结垢，换热能力下降，供水温度升高而回水温度变化不明显。",
+      "detected_by": ["Supply Temperature", "Return Temperature", "Chiller Efficiency"],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        {"sensor": "Supply Temperature", "signature": "逐步靠近 Return Temperature，温差收窄"},
+        {"sensor": "Chiller Efficiency", "signature": "同负荷下持续下降"}
+      ],
+      "monitoring_plan": [
+        "监控 Supply/Return 温差，温差收窄 15% 视为告警",
+        "同步看 Chiller Efficiency 的衰减斜率"
+      ],
+      "priority_sensor": "Supply Temperature"
+    },
+    {
+      "name": "Refrigerant Undercharge",
+      "description": "制冷剂泄漏或充注不足，蒸发温度抬高、过热度增大、能力下降。",
+      "detected_by": [
+        "Liquid Refrigerant Evaporator Temperature",
+        "Supply Temperature",
+        "Chiller Efficiency",
+        "Power Input"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        {"sensor": "Liquid Refrigerant Evaporator Temperature", "signature": "缓慢抬升"},
+        {"sensor": "Power Input", "signature": "同负荷下缓慢下降"},
+        {"sensor": "Chiller Efficiency", "signature": "持续下降"}
+      ],
+      "monitoring_plan": [
+        "以 Liquid Refrigerant Evaporator Temperature 的慢趋势为主，配合效率衰减联合判定",
+        "排除制冷剂过充（过充时该测点反而下降）"
+      ],
+      "priority_sensor": "Liquid Refrigerant Evaporator Temperature"
+    },
+    {
+      "name": "Refrigerant Overcharge",
+      "description": "制冷剂过量，冷凝压力与功率升高，蒸发温度偏低。",
+      "detected_by": [
+        "Liquid Refrigerant Evaporator Temperature",
+        "Power Input",
+        "Tonnage"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        {"sensor": "Liquid Refrigerant Evaporator Temperature", "signature": "下降"},
+        {"sensor": "Power Input", "signature": "同负荷下抬升"},
+        {"sensor": "Tonnage", "signature": "略有提升但效率下降"}
+      ],
+      "monitoring_plan": [
+        "以 Liquid Refrigerant Evaporator Temperature 下降 + Power Input 抬升的剪刀差为判据"
+      ],
+      "priority_sensor": "Liquid Refrigerant Evaporator Temperature"
+    },
+    {
+      "name": "Excess Purge",
+      "description": "抽气（purge）单元动作过于频繁，多为系统渗入空气或不凝性气体累积。",
+      "detected_by": ["Run Status", "Power Input", "Chiller Efficiency"],
+      "sensor_classes": ["status", "power"],
+      "temporal": [
+        {"sensor": "Run Status", "signature": "运行状态出现周期性短时中断"},
+        {"sensor": "Power Input", "signature": "同负荷下小幅振荡"},
+        {"sensor": "Chiller Efficiency", "signature": "缓慢下降"}
+      ],
+      "monitoring_plan": [
+        "统计 Run Status 的切换频次（次/日）作为 purge 次数代理指标",
+        "结合 Power Input 振荡幅度与效率趋势做联合告警",
+        "维护侧应在停机窗口做气密性与抽气计数器核对——本机无 purge 专用计数器，只能以状态切换代理"
+      ],
+      "priority_sensor": "Run Status"
+    },
+    {
+      "name": "Chiller Trip",
+      "description": "机组保护性跳机，表现为运行状态中断、功率跌零、供温短时上升。",
+      "detected_by": ["Run Status", "Power Input", "Supply Temperature"],
+      "sensor_classes": ["status", "power", "temperature"],
+      "temporal": [
+        {"sensor": "Run Status", "signature": "运行→停机→（可恢复）运行"},
+        {"sensor": "Power Input", "signature": "与 Run Status 同步跌零"},
+        {"sensor": "Supply Temperature", "signature": "跳机期间上升"}
+      ],
+      "monitoring_plan": [
+        "Run Status 状态机做跳机事件抽取，统计间隔与恢复时长",
+        "结合 Power Input 同步跌零排除通信中断"
+      ],
+      "priority_sensor": "Run Status"
+    },
+    {
+      "name": "Condenser Water Flow Reduction",
+      "description": "冷凝水流量下降（泵故障、阀位异常、管路堵塞），冷凝温度抬升。",
+      "detected_by": ["Condenser Water Flow", "Condenser Water Return To Tower Temperature"],
+      "sensor_classes": ["flow", "temperature"],
+      "temporal": [
+        {"sensor": "Condenser Water Flow", "signature": "阶跃或斜坡下降"},
+        {"sensor": "Condenser Water Return To Tower Temperature", "signature": "同步抬升"}
+      ],
+      "monitoring_plan": [
+        "Condenser Water Flow 跌破设计流量 80% 触发告警，并与回水温度联动确认"
+      ],
+      "priority_sensor": "Condenser Water Flow"
+    },
+    {
+      "name": "Evaporator Water Flow Reduction",
+      "description": "冷冻水流量下降，供回水温差拉大、冷量不足。",
+      "detected_by": ["Return Temperature", "Supply Temperature", "Tonnage"],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        {"sensor": "Return Temperature", "signature": "抬升"},
+        {"sensor": "Tonnage", "signature": "下降"}
+      ],
+      "monitoring_plan": [
+        "供回水温差扩大 + Tonnage 下降的联合判据；本机无蒸发侧流量测点，只能间接推断"
+      ],
+      "priority_sensor": "Return Temperature"
+    },
+    {
+      "name": "Liquid Line Restriction",
+      "description": "液管堵塞或膨胀阀故障，蒸发温度偏低、过冷度异常。",
+      "detected_by": [
+        "Liquid Refrigerant Evaporator Temperature",
+        "Power Input",
+        "Tonnage"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        {"sensor": "Liquid Refrigerant Evaporator Temperature", "signature": "下降"},
+        {"sensor": "Tonnage", "signature": "下降"},
+        {"sensor": "Power Input", "signature": "同负荷下下降"}
+      ],
+      "monitoring_plan": [
+        "与制冷剂过充区分：过充时 Tonnage 不降，堵塞时 Tonnage 明显下降"
+      ],
+      "priority_sensor": "Liquid Refrigerant Evaporator Temperature"
+    },
+    {
+      "name": "Condenser Water Temperature Too High",
+      "description": "冷却塔侧供水温度过高，冷凝能力不足。",
+      "detected_by": [
+        "Condenser Water Return To Tower Temperature",
+        "Power Input",
+        "Chiller Efficiency"
+      ],
+      "sensor_classes": ["temperature", "power"],
+      "temporal": [
+        {"sensor": "Condenser Water Return To Tower Temperature", "signature": "整体水平抬升"},
+        {"sensor": "Chiller Efficiency", "signature": "同负荷下下降"}
+      ],
+      "monitoring_plan": [
+        "以环境湿球温度为参照做温度基线上移判定，排除季节因素"
+      ],
+      "priority_sensor": "Condenser Water Return To Tower Temperature"
+    }
+  ],
+  "symptom_causes": [
+    {"sensor": "Power Input", "direction": "drops", "candidates": [
+      {"failure_mode": "Compressor Motor Failure", "confidence": "high", "note": "阶跃跌至接近 0 且 Run Status 同步停机"},
+      {"failure_mode": "Refrigerant Undercharge", "confidence": "medium", "note": "缓慢下降且效率同步衰减"},
+      {"failure_mode": "Liquid Line Restriction", "confidence": "low", "note": "下降同时 Tonnage 明显下降"}
+    ]},
+    {"sensor": "Power Input", "direction": "rises", "candidates": [
+      {"failure_mode": "Compressor Overheating", "confidence": "high", "note": "持续高于同负荷基线"},
+      {"failure_mode": "Refrigerant Overcharge", "confidence": "medium", "note": "抬升同时蒸发温度下降"},
+      {"failure_mode": "Condenser Water Side Fouling", "confidence": "medium", "note": "月度尺度抬升且效率下降"}
+    ]},
+    {"sensor": "Liquid Refrigerant Evaporator Temperature", "direction": "drops", "candidates": [
+      {"failure_mode": "Refrigerant Overcharge", "confidence": "high", "note": "Tonnage 不降反升"},
+      {"failure_mode": "Liquid Line Restriction", "confidence": "medium", "note": "Tonnage 同步下降"}
+    ]},
+    {"sensor": "Liquid Refrigerant Evaporator Temperature", "direction": "rises", "candidates": [
+      {"failure_mode": "Refrigerant Undercharge", "confidence": "high", "note": "缓慢抬升并伴随效率衰减"},
+      {"failure_mode": "Compressor Overheating", "confidence": "medium", "note": "与 Power Input 抬升同步"}
+    ]},
+    {"sensor": "Supply Temperature", "direction": "rises", "candidates": [
+      {"failure_mode": "Evaporator Water Side Fouling", "confidence": "high", "note": "供回温差收窄"},
+      {"failure_mode": "Refrigerant Undercharge", "confidence": "medium", "note": "蒸发温度同步抬升"},
+      {"failure_mode": "Chiller Trip", "confidence": "low", "note": "伴随 Run Status 中断"}
+    ]},
+    {"sensor": "Condenser Water Return To Tower Temperature", "direction": "rises", "candidates": [
+      {"failure_mode": "Condenser Water Side Fouling", "confidence": "high", "note": "月度单调抬升"},
+      {"failure_mode": "Condenser Water Flow Reduction", "confidence": "medium", "note": "与流量下降同步"},
+      {"failure_mode": "Condenser Water Temperature Too High", "confidence": "medium", "note": "整体水平抬升"}
+    ]},
+    {"sensor": "Run Status", "direction": "drops", "candidates": [
+      {"failure_mode": "Chiller Trip", "confidence": "high", "note": "保护性停机"},
+      {"failure_mode": "Compressor Motor Failure", "confidence": "medium", "note": "停后不再恢复"},
+      {"failure_mode": "Excess Purge", "confidence": "low", "note": "短时周期性中断"}
+    ]},
+    {"sensor": "Chiller % Loaded", "direction": "rises", "candidates": [
+      {"failure_mode": "Compressor Overheating", "confidence": "medium", "note": "长时间高负荷是诱发因素"}
+    ]}
+  ]
+}

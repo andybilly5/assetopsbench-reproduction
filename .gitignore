@@ -1,0 +1,34 @@
+# Python 构建及本地环境
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# 凭据、机器配置与备份
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.bak*
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+# 实验输出与模型权重
+/results/
+/logs/
+/checkpoints/
+/models/
+*.safetensors
+*.pt
+*.pth

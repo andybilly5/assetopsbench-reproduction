@@ -1,0 +1,1 @@
+{"id":"smoke-001","text":"List available sites.","expected_answer":{"sites":["DEMO"]},"scoring_method":"static_json"}
