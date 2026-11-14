@@ -27,6 +27,10 @@
 | 原场景静态标准答案 | 0；静态冒烟成功不代表公开场景完成率 |
 | 常见凭据模式扫描 | 0 个命中；仅为本次检查，不代表正式安全审计 |
 
-开发工具版本：pytest 9.2.0、Ruff 0.17.5。CI 配置已写入；尚未上传至 GitHub，不能宣称远程 CI 已运行通过。
+开发工具版本：pytest 9.2.0、Ruff 0.17.5。2026-11-15 已上传至 GitHub 私有仓库；提交 ef56c769ed41b0b38d1282a2f0fb7a05c4628672 的远程 CI 全部通过，包含 lint、格式检查、135 项单元测试和离线冒烟验证。
+
+仓库：[andybilly5/assetopsbench-reproduction](https://github.com/andybilly5/assetopsbench-reproduction)
+
+远程验证：[GitHub Actions 运行记录](https://github.com/andybilly5/assetopsbench-reproduction/actions/runs/43653313894)。
 
 现有实验实现仅做格式、兼容导入和文档整理，测试的临时路径修复不改变实验算法。判官数值逻辑、策略实现、工具算法保持原样；数据只统一文本换行，字段与记录不变。数据文件校验值见 DATA_SHA256.json。
